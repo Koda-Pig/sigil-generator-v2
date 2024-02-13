@@ -41,6 +41,8 @@ const alphabet = {
   z: "zigzag" // Simplified to a horizontal zigzag
 };
 
+const vowels = ["a", "e", "i", "o", "u"];
+
 const setTransitionTime = () => {
   const computedStyle = window.getComputedStyle(result);
   animationDuration =
@@ -72,19 +74,19 @@ const handleFormSubmit = (e) => {
 
   // process input
   userInput = txtInput.value.toLowerCase();
-  const processedInput = processInput(userInput);
+  userInput = processInput(userInput);
 
   // add animation classes
   result.classList.add("animate");
 
-  processedInput.forEach((character, index) => {
+  userInput.forEach((character, index) => {
     const shape = alphabet[character];
 
-    for (let i = 0; i < letterNodes.length; i++) {
-      if (character === letterNodes[i].innerText) {
-        letterNodes[i].classList.add("show");
+    letterNodes.forEach((node) => {
+      if (character === node.innerText) {
+        node.classList.add("show");
       }
-    }
+    });
 
     // draw shapes
     setTimeout(() => {
@@ -131,6 +133,8 @@ const mapAlphabet = () => {
     const letterNode = document.createElement("p");
     letterNode.classList.add("letter");
     letterNode.innerText = letter;
+    // add vowel class if it's a vowel
+    if (vowels.includes(letter)) letterNode.classList.add("vowel");
     result.appendChild(letterNode);
   });
 
@@ -156,8 +160,8 @@ const drawShape = (shape, index) => {
   const svgCenterY = svgHeight / 2;
 
   // Should randomise this as well
-  // let lineLength = Math.random() * 150 + 100;
-  let lineLength = 100;
+  let lineLength = Math.random() * 150 + 100;
+  // let lineLength = 100;
 
   switch (shape) {
     case "line":

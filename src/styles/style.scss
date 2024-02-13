@@ -135,10 +135,16 @@ h1 {
       &.show {
         animation: dissolve var(--animation-time) forwards;
       }
+
+      &.vowel {
+        // need to implement a animation to indicate that vowels
+        // are removed and not used in the sigil
+      }
     }
   }
 
   .letter {
+    margin: 0;
     position: absolute;
     opacity: 0.1;
     pointer-events: none;
