@@ -59,15 +59,23 @@ const validateInput = (e) => {
 const handleFormSubmit = (e) => {
   e.preventDefault();
 
-  reset();
+  // reset
+  reset({ disableSubmit: false });
 
+  // input validation is handled in validateInput function
+  // so this alert should only show if user removes disabled
+  // attribute from submit button by editing the HTML
   if (!validInput) {
     alert("Add your wish to the text input you tonsil");
     return;
   }
 
+  // process input
   userInput = txtInput.value.toLowerCase();
   const processedInput = processInput(userInput);
+
+  // add animation classes
+  result.classList.add("animate");
 
   processedInput.forEach((character, index) => {
     const shape = alphabet[character];
@@ -78,17 +86,25 @@ const handleFormSubmit = (e) => {
       }
     }
 
-    // adjust positioning here
+    // draw shapes
     setTimeout(() => {
       drawShape(shape, index);
     }, animationDuration * 2);
   });
 
-  result.classList.add("animate");
-
+  // animation for result
   setTimeout(() => {
     result.classList.remove("animate");
     result.classList.add("slide-inward");
+
+    setTimeout(() => {
+      result.classList.add("animate");
+
+      // Remove animate after it completes again
+      setTimeout(() => {
+        result.classList.remove("animate");
+      }, animationDuration);
+    }, animationDuration * 2.5); // Time after which slide-inward completes
   }, animationDuration);
 };
 
@@ -121,7 +137,8 @@ const mapAlphabet = () => {
   letterNodes = result.querySelectorAll(".letter");
 };
 
-const reset = () => {
+const reset = ({ disableSubmit = true }) => {
+  if (disableSubmit) submitBtn.setAttribute("disabled", "");
   result.classList.remove("slide-inward");
   result.classList.remove("animate");
   result.querySelectorAll(".show").forEach((el) => el.classList.remove("show"));
@@ -233,11 +250,13 @@ const drawShape = (shape, index) => {
     const centerY = bbox.y + bbox.height / 2;
     elem.setAttribute(
       "transform",
-      `rotate(${rotationAngle} ${centerX} ${centerY}) ${elem.customTransform}`
+      `rotate(${rotationAngle} ${centerX} ${centerY}) ${
+        elem.customTransform ? elem.customTransform : ""
+      }`
     );
   }
 
-  if (userInput.length === 1) {
+  if (userInput.length === 1 && elem.customTransform) {
     elem.setAttribute("transform", elem.customTransform);
   }
 
