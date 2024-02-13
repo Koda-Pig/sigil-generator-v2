@@ -1,0 +1,258 @@
+import "../styles/style.scss";
+
+const form = document.querySelector("#wish-form"),
+  txtInput = form.querySelector(".input"),
+  submitBtn = form.querySelector("button[type='submit']"),
+  resetBtn = form.querySelector("button[type='reset']"),
+  result = document.querySelector(".result"),
+  svg = result.querySelector("#svg");
+
+let letterNodes = null,
+  userInput = "",
+  validInput = false,
+  animationDuration = 1000;
+
+const alphabet = {
+  a: "triangle",
+  b: "circle",
+  c: "crescent",
+  d: "circle", // Adjusted from "semi-circle" to keep shapes simple
+  e: "circle-crossed", // Adjusted from "ellipse" to "circle" for simplicity
+  f: "rectangle", // A simplification; could be represented as a thin rectangle
+  g: "circle", // Simplified shape selection
+  h: "rectangle",
+  i: "line",
+  j: "line", // Simplified, can be a line with a small curve if needed
+  k: "line", // Using multiple lines or a single slanted line for simplicity
+  l: "line",
+  m: "triangle", // Simplified to represent peaks without complexity
+  n: "zigzag", // Simple back-and-forth lines
+  o: "circle",
+  p: "circle", // Simplified, considering a circle can represent many forms
+  q: "circle", // Simplified to a basic shape for ease of drawing
+  r: "rectangle", // Simplified, could be a rectangle with a small protrusion
+  s: "crescent", // Simplified, a crescent can resemble a wave's curve
+  t: "line", // Simplified to a T-shape using lines
+  u: "crescent", // Adjusted to keep shapes simple, can be an inverted crescent
+  v: "chevron", // Simple V-shape
+  w: "chevron", // Double V, simplified to a W-shape using two connected chevrons
+  x: "line", // Crossed lines to form an X
+  y: "line", // A single line splitting into two directions
+  z: "zigzag" // Simplified to a horizontal zigzag
+};
+
+const setTransitionTime = () => {
+  const computedStyle = window.getComputedStyle(result);
+  animationDuration =
+    parseFloat(computedStyle.getPropertyValue("animation-duration")) * 1000;
+};
+
+const validateInput = (e) => {
+  const value = e.target.value.trim();
+  validInput = e.target.validity.valid;
+  if (value.length < 1) validInput = false;
+
+  if (validInput) submitBtn.removeAttribute("disabled");
+  else submitBtn.setAttribute("disabled", "");
+};
+
+const handleFormSubmit = (e) => {
+  e.preventDefault();
+
+  reset();
+
+  if (!validInput) {
+    alert("Add your wish to the text input you tonsil");
+    return;
+  }
+
+  userInput = txtInput.value.toLowerCase();
+  const processedInput = processInput(userInput);
+
+  processedInput.forEach((character, index) => {
+    const shape = alphabet[character];
+
+    for (let i = 0; i < letterNodes.length; i++) {
+      if (character === letterNodes[i].innerText) {
+        letterNodes[i].classList.add("show");
+      }
+    }
+
+    // adjust positioning here
+    setTimeout(() => {
+      drawShape(shape, index);
+    }, animationDuration * 2);
+  });
+
+  result.classList.add("animate");
+
+  setTimeout(() => {
+    result.classList.remove("animate");
+    result.classList.add("slide-inward");
+  }, animationDuration);
+};
+
+// Remove duplicates, spaces, convert to lowercase and alphabetize
+const processInput = (input) => {
+  let inputArray = Array.from(input);
+  const newArray = [];
+
+  // Only add new characters (no repeats)
+  for (let i = 0; i < inputArray.length; i++) {
+    if (!newArray.includes(inputArray[i]) && inputArray[i].trim() !== "") {
+      newArray.push(inputArray[i]);
+    }
+  }
+
+  // Alphabetize
+  newArray.sort();
+
+  return newArray;
+};
+
+const mapAlphabet = () => {
+  Object.keys(alphabet).forEach((letter) => {
+    const letterNode = document.createElement("p");
+    letterNode.classList.add("letter");
+    letterNode.innerText = letter;
+    result.appendChild(letterNode);
+  });
+
+  letterNodes = result.querySelectorAll(".letter");
+};
+
+const reset = () => {
+  result.classList.remove("slide-inward");
+  result.classList.remove("animate");
+  result.querySelectorAll(".show").forEach((el) => el.classList.remove("show"));
+  svg.innerHTML = "";
+};
+
+const drawShape = (shape, index) => {
+  let elem;
+  // Random rotation angle
+  let rotationAngle = Math.random() * (index + 1) * 360;
+
+  const svgWidth = svg.clientWidth || svg.viewBox.baseVal.width;
+  const svgHeight = svg.clientHeight || svg.viewBox.baseVal.height;
+  const svgCenterX = svgWidth / 2;
+  const svgCenterY = svgHeight / 2;
+
+  // Should randomise this as well
+  // let lineLength = Math.random() * 150 + 100;
+  let lineLength = 100;
+
+  switch (shape) {
+    case "line":
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      elem.setAttribute("x1", svgCenterX - lineLength / 2);
+      elem.setAttribute("y1", svgCenterY);
+      elem.setAttribute("x2", svgCenterX + lineLength / 2 + lineLength);
+      elem.setAttribute("y2", svgCenterY);
+      break;
+
+    case "zigzag":
+      // Zigzag as a polyline for simplicity
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      elem.setAttribute(
+        "points",
+        `${svgCenterX},${svgCenterY} ${svgCenterX + lineLength},${
+          svgCenterY + lineLength
+        } ${svgCenterX + lineLength * 2},${svgCenterY} ${
+          svgCenterX + lineLength * 3
+        },${svgCenterY + lineLength} ${
+          svgCenterX + lineLength * 4
+        },${svgCenterY}`
+      );
+      break;
+
+    case "triangle":
+      const sideLength = lineLength * 2,
+        triangleHeight = (Math.sqrt(3) / 2) * sideLength,
+        topVertexX = svgCenterX,
+        topVertexY = svgCenterY - (2 / 3) * triangleHeight,
+        bottomLeftVertexX = svgCenterX - sideLength / 2,
+        bottomRightVertexX = svgCenterX + sideLength / 2,
+        bottomVerticesY = svgCenterY + (1 / 3) * triangleHeight;
+
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      elem.setAttribute(
+        "points",
+        `${topVertexX},${topVertexY} ` +
+          `${bottomLeftVertexX},${bottomVerticesY} ` +
+          `${bottomRightVertexX},${bottomVerticesY}`
+      );
+      break;
+
+    case "rectangle":
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      elem.setAttribute("x", svgCenterX - (lineLength * 1.5) / 2);
+      elem.setAttribute("y", svgCenterY - lineLength / 2);
+      elem.setAttribute("width", lineLength * 1.5);
+      elem.setAttribute("height", lineLength);
+      break;
+
+    case "circle":
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      elem.setAttribute("cx", svgCenterX);
+      elem.setAttribute("cy", svgCenterY);
+      elem.setAttribute("r", lineLength);
+      elem.setAttribute("noBBox", ""); // No bbox for circle
+      break;
+
+    case "crescent":
+      const cLength = lineLength * 1.5;
+      // length ratio
+      const lr = (percent) => {
+        return percent ? (percent / 100) * cLength : cLength;
+      };
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      elem.setAttribute(
+        "d",
+        `M${lr()} ${lr(40)}A${lr(80)} ${lr(80)} 0 1 0 ${lr()} ${lr(140)} ${lr(
+          60
+        )} ${lr(60)} 0 1 1 ${lr()} ${lr(40)}z`
+      );
+      // center the crescent
+      elem.customTransform = "translate(200 105)";
+      break;
+  }
+
+  if (!elem) return;
+
+  elem.setAttribute("stroke-width", "2");
+  elem.setAttribute("fill", "none"); // For shapes like rectangle, triangle
+  svg.appendChild(elem);
+
+  // Apply rotation for elements, adjusting the center as needed
+  // with the exception of some elements which have no bbox (circle)
+  // Or if there is only one element, no need to rotate
+  if (!elem.hasAttribute("noBBox") && userInput.length > 1) {
+    const bbox = elem.getBBox();
+    const centerX = bbox.x + bbox.width / 2;
+    const centerY = bbox.y + bbox.height / 2;
+    elem.setAttribute(
+      "transform",
+      `rotate(${rotationAngle} ${centerX} ${centerY}) ${elem.customTransform}`
+    );
+  }
+
+  if (userInput.length === 1) {
+    elem.setAttribute("transform", elem.customTransform);
+  }
+
+  // Animation for drawing the element
+  const length = elem.getTotalLength ? elem.getTotalLength() : 0;
+  if (length > 0) {
+    // Only apply if getTotalLength is supported
+    elem.style.strokeDasharray = length;
+    elem.style.strokeDashoffset = length;
+  }
+};
+
+setTransitionTime();
+mapAlphabet();
+
+txtInput.addEventListener("input", (e) => validateInput(e));
+submitBtn.addEventListener("click", (e) => handleFormSubmit(e));
+resetBtn.addEventListener("click", reset);
