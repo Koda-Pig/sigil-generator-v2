@@ -30,7 +30,7 @@ const alphabet = {
   o: "circle",
   p: "circle", // Simplified, considering a circle can represent many forms
   q: "circle", // Simplified to a basic shape for ease of drawing
-  r: "rectangle", // Simplified, could be a rectangle with a small protrusion
+  r: "square", // Simplified, could be a rectangle with a small protrusion
   s: "crescent", // Simplified, a crescent can resemble a wave's curve
   t: "line", // Simplified to a T-shape using lines
   u: "crescent", // Adjusted to keep shapes simple, can be an inverted crescent
@@ -161,14 +161,14 @@ const drawShape = (shape, index) => {
 
   // Should randomise this as well
   let lineLength = Math.random() * 150 + 100;
-  // let lineLength = 100;
+  // lineLength = 100;
 
   switch (shape) {
     case "line":
       elem = document.createElementNS("http://www.w3.org/2000/svg", "line");
       elem.setAttribute("x1", svgCenterX - lineLength / 2);
       elem.setAttribute("y1", svgCenterY);
-      elem.setAttribute("x2", svgCenterX + lineLength / 2 + lineLength);
+      elem.setAttribute("x2", svgCenterX + lineLength / 2);
       elem.setAttribute("y2", svgCenterY);
       break;
 
@@ -213,6 +213,14 @@ const drawShape = (shape, index) => {
       elem.setAttribute("height", lineLength);
       break;
 
+    case "square":
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      elem.setAttribute("x", svgCenterX - lineLength / 2);
+      elem.setAttribute("y", svgCenterY - lineLength / 2);
+      elem.setAttribute("width", lineLength);
+      elem.setAttribute("height", lineLength);
+      break;
+
     case "circle":
       elem = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       elem.setAttribute("cx", svgCenterX);
@@ -236,6 +244,16 @@ const drawShape = (shape, index) => {
       );
       // center the crescent
       elem.customTransform = "translate(200 105)";
+      break;
+
+    case "chevron":
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      elem.setAttribute(
+        "points",
+        `${svgCenterX - lineLength / 2},${svgCenterY - lineLength / 2} ` +
+          `${svgCenterX},${svgCenterY + lineLength / 2} ` +
+          `${svgCenterX + lineLength / 2},${svgCenterY - lineLength / 2}`
+      );
       break;
   }
 
