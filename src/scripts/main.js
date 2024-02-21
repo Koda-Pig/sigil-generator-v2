@@ -13,32 +13,32 @@ let letterNodes = null,
   animationDuration = 1000;
 
 const alphabet = {
-  a: "triangle",
+  a: null,
   b: "circle",
   c: "crescent",
-  d: "circle", // Adjusted from "semi-circle" to keep shapes simple
-  e: "circle-crossed", // Adjusted from "ellipse" to "circle" for simplicity
-  f: "rectangle", // A simplification; could be represented as a thin rectangle
-  g: "circle", // Simplified shape selection
+  d: "circle",
+  e: null,
+  f: "rectangle",
+  g: "circle",
   h: "rectangle",
-  i: "line",
-  j: "line", // Simplified, can be a line with a small curve if needed
-  k: "line", // Using multiple lines or a single slanted line for simplicity
+  i: null,
+  j: "line",
+  k: "line",
   l: "line",
-  m: "triangle", // Simplified to represent peaks without complexity
-  n: "zigzag", // Simple back-and-forth lines
-  o: "circle",
-  p: "circle", // Simplified, considering a circle can represent many forms
-  q: "circle", // Simplified to a basic shape for ease of drawing
-  r: "square", // Simplified, could be a rectangle with a small protrusion
-  s: "crescent", // Simplified, a crescent can resemble a wave's curve
-  t: "line", // Simplified to a T-shape using lines
-  u: "crescent", // Adjusted to keep shapes simple, can be an inverted crescent
-  v: "chevron", // Simple V-shape
-  w: "chevron", // Double V, simplified to a W-shape using two connected chevrons
-  x: "line", // Crossed lines to form an X
-  y: "line", // A single line splitting into two directions
-  z: "zigzag" // Simplified to a horizontal zigzag
+  m: "triangle",
+  n: "zigzag",
+  o: null,
+  p: "circle",
+  q: "circle",
+  r: "square",
+  s: "crescent",
+  t: "line",
+  u: null,
+  v: "chevron",
+  w: "chevron",
+  x: "line",
+  y: "line",
+  z: "zigzag"
 };
 
 const vowels = ["a", "e", "i", "o", "u"];
@@ -174,16 +174,18 @@ const drawShape = (shape, index) => {
 
     case "zigzag":
       // Zigzag as a polyline for simplicity
+      const totalZigzagWidth = lineLength * 4; // Total width for 2 peaks
+      const startZigzagX = svgCenterX - totalZigzagWidth / 2; // Start from this X to center the zigzag
+      const zigzagHeight = lineLength / 2; // Adjust the height of the peaks if necessary
+
       elem = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
       elem.setAttribute(
         "points",
-        `${svgCenterX},${svgCenterY} ${svgCenterX + lineLength},${
-          svgCenterY + lineLength
-        } ${svgCenterX + lineLength * 2},${svgCenterY} ${
-          svgCenterX + lineLength * 3
-        },${svgCenterY + lineLength} ${
-          svgCenterX + lineLength * 4
-        },${svgCenterY}`
+        `${startZigzagX},${svgCenterY} ` +
+          `${startZigzagX + lineLength},${svgCenterY - zigzagHeight} ` + // Peak 1
+          `${startZigzagX + lineLength * 2},${svgCenterY} ` + // Valley
+          `${startZigzagX + lineLength * 3},${svgCenterY + zigzagHeight} ` + // Peak 2
+          `${startZigzagX + lineLength * 4},${svgCenterY}` // Back to center line at the end
       );
       break;
 
