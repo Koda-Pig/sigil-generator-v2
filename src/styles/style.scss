@@ -49,10 +49,15 @@ h1 {
   place-content: center;
 
   label {
+    font-size: 1.2rem;
     text-align: center;
   }
 
   .input {
+    color: var(--blue);
+    background-color: transparent;
+    border: 0;
+    outline: 0;
     font-size: 1.5rem;
     text-align: center;
     min-width: min(40ch, 100%);

@@ -295,6 +295,7 @@ const drawShape = (shape, index) => {
 
 setTransitionTime();
 mapAlphabet();
+txtInput.focus();
 
 txtInput.addEventListener("input", (e) => validateInput(e));
 submitBtn.addEventListener("click", (e) => handleFormSubmit(e));
