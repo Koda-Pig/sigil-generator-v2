@@ -293,6 +293,14 @@ const drawShape = (shape, index) => {
   }
 };
 
+const restoreInputFocus = (e) => {
+  const node = e.target.nodeName;
+  if (node === "BUTTON" || node === "INPUT") return;
+
+  // restore focus to text input
+  txtInput.focus();
+};
+
 setTransitionTime();
 mapAlphabet();
 txtInput.focus();
@@ -300,3 +308,4 @@ txtInput.focus();
 txtInput.addEventListener("input", (e) => validateInput(e));
 submitBtn.addEventListener("click", (e) => handleFormSubmit(e));
 resetBtn.addEventListener("click", reset);
+document.body.addEventListener("click", restoreInputFocus);
