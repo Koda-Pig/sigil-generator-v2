@@ -13,6 +13,6 @@ A sigil _(/ˈsɪdʒəl/; pl. sigilla or sigils)_ is a type of symbol used in mag
 ## TODO
 
 - [x] change input validation to disable/ enable submit button
-- [ ] Refactor sass
+- [x] Refactor sass
 - [ ] Incorporate a modifier to randomize shape size and position
-- [ ] Center drawings
+- [x] Center drawings
