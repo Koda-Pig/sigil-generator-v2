@@ -149,6 +149,113 @@ const reset = ({ disableSubmit = true }) => {
   svg.innerHTML = "";
 };
 
+// Helper functions for organic shape generation
+const randomRange = (min, max) => min + Math.random() * (max - min);
+
+const addNoise = (value, magnitude) => {
+  return value + randomRange(-magnitude, magnitude);
+};
+
+const createOrganicPath = (points, noiseAmount = 10, smoothness = 3) => {
+  if (points.length < 2) return "";
+
+  let pathData = `M${points[0].x},${points[0].y}`;
+
+  if (points.length === 2) {
+    // Just a line between two points with noise
+    const controlX =
+      (points[0].x + points[1].x) / 2 + randomRange(-noiseAmount, noiseAmount);
+    const controlY =
+      (points[0].y + points[1].y) / 2 + randomRange(-noiseAmount, noiseAmount);
+    return `M${points[0].x},${points[0].y} Q${controlX},${controlY} ${points[1].x},${points[1].y}`;
+  }
+
+  // For more points, create a smooth curve with noise
+  for (let i = 0; i < points.length - 1; i++) {
+    const curr = points[i];
+    const next = points[i + 1];
+
+    // Calculate control points for a smooth curve with randomness
+    const midX = (curr.x + next.x) / 2;
+    const midY = (curr.y + next.y) / 2;
+
+    // Add first curve segment with noisy control point
+    const cp1x = midX + randomRange(-noiseAmount, noiseAmount);
+    const cp1y = midY + randomRange(-noiseAmount, noiseAmount);
+
+    if (i === 0) {
+      pathData += ` Q${cp1x},${cp1y} ${midX},${midY}`;
+    } else {
+      // Use the previous control point to ensure smooth connection
+      pathData += ` T${midX},${midY}`;
+    }
+
+    // Add second curve segment with noisy control point
+    const cp2x = midX + randomRange(-noiseAmount, noiseAmount);
+    const cp2y = midY + randomRange(-noiseAmount, noiseAmount);
+
+    pathData += ` Q${cp2x},${cp2y} ${next.x},${next.y}`;
+  }
+
+  return pathData;
+};
+
+const createOrganicCircle = (
+  cx,
+  cy,
+  radius,
+  noisePoints = 12,
+  noiseAmount = 0.3
+) => {
+  const points = [];
+  for (let i = 0; i < noisePoints; i++) {
+    const angle = (i / noisePoints) * Math.PI * 2;
+    const noisyRadius = radius * (1 + randomRange(-noiseAmount, noiseAmount));
+    points.push({
+      x: cx + Math.cos(angle) * noisyRadius,
+      y: cy + Math.sin(angle) * noisyRadius
+    });
+  }
+
+  // Close the path by duplicating the first few points
+  points.push(points[0], points[1], points[2]);
+
+  return createOrganicPath(points, radius * 0.1, 2);
+};
+
+const createOrganicLine = (x1, y1, x2, y2, noiseAmount = 10, segments = 3) => {
+  const points = [];
+
+  // Create points along the line with segment divisions
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    points.push({
+      x:
+        x1 +
+        (x2 - x1) * t +
+        (i > 0 && i < segments ? randomRange(-noiseAmount, noiseAmount) : 0),
+      y:
+        y1 +
+        (y2 - y1) * t +
+        (i > 0 && i < segments ? randomRange(-noiseAmount, noiseAmount) : 0)
+    });
+  }
+
+  return createOrganicPath(points, noiseAmount, 1);
+};
+
+const createOrganicPolygon = (points, noiseAmount = 10) => {
+  const noisyPoints = points.map((pt) => ({
+    x: pt.x + randomRange(-noiseAmount, noiseAmount),
+    y: pt.y + randomRange(-noiseAmount, noiseAmount)
+  }));
+
+  // Connect back to the first point to close the shape
+  noisyPoints.push(noisyPoints[0]);
+
+  return createOrganicPath(noisyPoints, noiseAmount, 2);
+};
+
 const drawShape = (shape, index) => {
   let elem;
   // Random rotation angle
@@ -159,37 +266,45 @@ const drawShape = (shape, index) => {
   const svgCenterX = svgWidth / 2;
   const svgCenterY = svgHeight / 2;
 
-  // Should randomise this as well
+  // Random size variation
   let lineLength = Math.random() * 150 + 100;
-  // lineLength = 100;
+  // Additional randomness factor for organic shapes
+  const organicFactor = Math.random() * 0.4 + 0.8; // 0.8 to 1.2
 
   switch (shape) {
     case "line":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      elem.setAttribute("x1", svgCenterX - lineLength / 2);
-      elem.setAttribute("y1", svgCenterY);
-      elem.setAttribute("x2", svgCenterX + lineLength / 2);
-      elem.setAttribute("y2", svgCenterY);
-      break;
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const lineX1 = svgCenterX - lineLength / 2;
+      const lineY1 = svgCenterY;
+      const lineX2 = svgCenterX + lineLength / 2;
+      const lineY2 = svgCenterY;
 
-    case "zigzag":
-      // Zigzag as a polyline for simplicity
-      const totalZigzagWidth = lineLength * 4; // Total width for 2 peaks
-      const startZigzagX = svgCenterX - totalZigzagWidth / 2; // Start from this X to center the zigzag
-      const zigzagHeight = lineLength / 2; // Adjust the height of the peaks if necessary
-
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
       elem.setAttribute(
-        "points",
-        `${startZigzagX},${svgCenterY} ` +
-          `${startZigzagX + lineLength},${svgCenterY - zigzagHeight} ` + // Peak 1
-          `${startZigzagX + lineLength * 2},${svgCenterY} ` + // Valley
-          `${startZigzagX + lineLength * 3},${svgCenterY + zigzagHeight} ` + // Peak 2
-          `${startZigzagX + lineLength * 4},${svgCenterY}` // Back to center line at the end
+        "d",
+        createOrganicLine(lineX1, lineY1, lineX2, lineY2, lineLength * 0.1, 4)
       );
       break;
 
+    case "zigzag":
+      // Create organic zigzag as path
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const totalZigzagWidth = lineLength * 4;
+      const startZigzagX = svgCenterX - totalZigzagWidth / 2;
+      const zigzagHeight = lineLength / 2;
+
+      const zigPoints = [
+        { x: startZigzagX, y: svgCenterY },
+        { x: startZigzagX + lineLength, y: svgCenterY - zigzagHeight },
+        { x: startZigzagX + lineLength * 2, y: svgCenterY },
+        { x: startZigzagX + lineLength * 3, y: svgCenterY + zigzagHeight },
+        { x: startZigzagX + lineLength * 4, y: svgCenterY }
+      ];
+
+      elem.setAttribute("d", createOrganicPath(zigPoints, lineLength * 0.1, 2));
+      break;
+
     case "triangle":
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
       const sideLength = lineLength * 2,
         triangleHeight = (Math.sqrt(3) / 2) * sideLength,
         topVertexX = svgCenterX,
@@ -198,63 +313,130 @@ const drawShape = (shape, index) => {
         bottomRightVertexX = svgCenterX + sideLength / 2,
         bottomVerticesY = svgCenterY + (1 / 3) * triangleHeight;
 
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      const trianglePoints = [
+        { x: topVertexX, y: topVertexY },
+        { x: bottomLeftVertexX, y: bottomVerticesY },
+        { x: bottomRightVertexX, y: bottomVerticesY },
+        { x: topVertexX, y: topVertexY } // Close the path by returning to start
+      ];
+
       elem.setAttribute(
-        "points",
-        `${topVertexX},${topVertexY} ` +
-          `${bottomLeftVertexX},${bottomVerticesY} ` +
-          `${bottomRightVertexX},${bottomVerticesY}`
+        "d",
+        createOrganicPath(trianglePoints, lineLength * 0.1, 2)
       );
       break;
 
     case "rectangle":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      elem.setAttribute("x", svgCenterX - (lineLength * 1.5) / 2);
-      elem.setAttribute("y", svgCenterY - lineLength / 2);
-      elem.setAttribute("width", lineLength * 1.5);
-      elem.setAttribute("height", lineLength);
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const rectX = svgCenterX - (lineLength * 1.5) / 2;
+      const rectY = svgCenterY - lineLength / 2;
+      const rectWidth = lineLength * 1.5;
+      const rectHeight = lineLength;
+
+      const rectPoints = [
+        { x: rectX, y: rectY },
+        { x: rectX + rectWidth, y: rectY },
+        { x: rectX + rectWidth, y: rectY + rectHeight },
+        { x: rectX, y: rectY + rectHeight },
+        { x: rectX, y: rectY } // Close the path by returning to start
+      ];
+
+      elem.setAttribute(
+        "d",
+        createOrganicPath(rectPoints, lineLength * 0.08, 2)
+      );
       break;
 
     case "square":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      elem.setAttribute("x", svgCenterX - lineLength / 2);
-      elem.setAttribute("y", svgCenterY - lineLength / 2);
-      elem.setAttribute("width", lineLength);
-      elem.setAttribute("height", lineLength);
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const squareX = svgCenterX - lineLength / 2;
+      const squareY = svgCenterY - lineLength / 2;
+
+      const squarePoints = [
+        { x: squareX, y: squareY },
+        { x: squareX + lineLength, y: squareY },
+        { x: squareX + lineLength, y: squareY + lineLength },
+        { x: squareX, y: squareY + lineLength },
+        { x: squareX, y: squareY } // Close the path by returning to start
+      ];
+
+      elem.setAttribute(
+        "d",
+        createOrganicPath(squarePoints, lineLength * 0.05, 2)
+      );
       break;
 
     case "circle":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      elem.setAttribute("cx", svgCenterX);
-      elem.setAttribute("cy", svgCenterY);
-      elem.setAttribute("r", lineLength);
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const radius = lineLength * organicFactor;
+
+      elem.setAttribute(
+        "d",
+        createOrganicCircle(svgCenterX, svgCenterY, radius, 16, 0.2)
+      );
       elem.setAttribute("noBBox", ""); // No bbox for circle
       break;
 
     case "crescent":
-      const cLength = lineLength * 1.5;
-      // length ratio
-      const lr = (percent) => {
-        return percent ? (percent / 100) * cLength : cLength;
-      };
+      // Create organic crescent
       elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      elem.setAttribute(
-        "d",
-        `M${lr()} ${lr(40)}A${lr(80)} ${lr(80)} 0 1 0 ${lr()} ${lr(140)} ${lr(
-          60
-        )} ${lr(60)} 0 1 1 ${lr()} ${lr(40)}z`
+      const cLength = lineLength * 1.5;
+
+      const outerRadius = cLength * organicFactor;
+      const innerRadius = outerRadius * 0.6;
+      const offset = outerRadius * 0.4;
+
+      // Create points for outer and inner circles with noise
+      const outerPoints = [];
+      const innerPoints = [];
+      const numPoints = 16;
+
+      for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * Math.PI * 2;
+        const outerNoise = randomRange(-outerRadius * 0.1, outerRadius * 0.1);
+        const innerNoise = randomRange(-innerRadius * 0.1, innerRadius * 0.1);
+
+        outerPoints.push({
+          x: svgCenterX + Math.cos(angle) * (outerRadius + outerNoise),
+          y: svgCenterY + Math.sin(angle) * (outerRadius + outerNoise)
+        });
+
+        innerPoints.push({
+          x: svgCenterX + offset + Math.cos(angle) * (innerRadius + innerNoise),
+          y: svgCenterY + Math.sin(angle) * (innerRadius + innerNoise)
+        });
+      }
+
+      // Create crescent path with smooth connection
+      let crescentPath = createOrganicPath(
+        outerPoints.slice(0, numPoints / 2 + 1),
+        outerRadius * 0.05,
+        2
       );
-      // center the crescent
-      elem.customTransform = "translate(200 105)";
+      crescentPath +=
+        " " +
+        createOrganicPath(
+          innerPoints.slice(numPoints / 2, numPoints).reverse(),
+          innerRadius * 0.05,
+          2
+        ).replace("M", "L");
+      crescentPath += " Z";
+
+      elem.setAttribute("d", crescentPath);
       break;
 
     case "chevron":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+      const chevPoints = [
+        { x: svgCenterX - lineLength / 2, y: svgCenterY - lineLength / 2 },
+        { x: svgCenterX, y: svgCenterY + lineLength / 2 },
+        { x: svgCenterX + lineLength / 2, y: svgCenterY - lineLength / 2 }
+      ];
+
       elem.setAttribute(
-        "points",
-        `${svgCenterX - lineLength / 2},${svgCenterY - lineLength / 2} ` +
-          `${svgCenterX},${svgCenterY + lineLength / 2} ` +
-          `${svgCenterX + lineLength / 2},${svgCenterY - lineLength / 2}`
+        "d",
+        createOrganicPath(chevPoints, lineLength * 0.1, 2)
       );
       break;
   }
