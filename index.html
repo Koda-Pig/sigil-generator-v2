@@ -30,8 +30,18 @@
           <button type="reset">reset</button>
         </div>
       </form>
+      <fieldset class="variations">
+        <legend>Animation</legend>
+        <label><input type="radio" name="variation" value="random" checked /><span>random</span></label>
+        <label><input type="radio" name="variation" value="metamorphosis" /><span>metamorphosis</span></label>
+        <label><input type="radio" name="variation" value="wheel" /><span>wheel</span></label>
+        <label><input type="radio" name="variation" value="colony" /><span>colony</span></label>
+        <label><input type="radio" name="variation" value="thread" /><span>thread</span></label>
+        <label><input type="radio" name="variation" value="classic" /><span>classic</span></label>
+      </fieldset>
+      <p class="now-playing" aria-live="polite"></p>
       <section class="result">
-        <svg width="482" height="482" id="svg"></svg>
+        <svg width="482" height="482" viewBox="0 0 482 482" id="svg"></svg>
       </section>
     </main>
     <script type="module" src="src/scripts/main.js"></script>

@@ -8,7 +8,25 @@ A sigil _(/ˈsɪdʒəl/; pl. sigilla or sigils)_ is a type of symbol used in mag
 
 1. Clone the repository
 2. Run `npm install`
-3. Run `npm dev`
+3. Run `npm run dev`
+
+## Animations
+
+Pick a variation under the form, or leave it on **random**. Each one takes the wish from "letters lit up on the ring" to a finished sigil in a different way. Vowels crumble to dust in all of them.
+
+| Variation | What happens |
+| --- | --- |
+| **metamorphosis** | Each letter spirals inward and melts from its letterform into its shape. Shapes land at random sizes and offsets, with rotations locked to a shared angle. |
+| **wheel** | A line is traced across the ring from letter to letter in wish order (the "witch's wheel"). The style of each chord depends on the letter it arrives at. Letters shrink into ornaments and each vertex is pulled in to a different depth. |
+| **colony** | A cellular automaton, in the spirit of Conway's Game of Life. Each generation the letters drift together, count their neighbours, and react: 0 neighbours → starve (simpler shape), 1 → bond with it (echo / pierce / crown / nest / cross, depending on the pair), 2-3 → thrive (more complex shape), 4+ → overcrowd (flip shape, thrown outward). |
+| **thread** | Each letter unravels and the threads are tied end to end into one continuous line. Each letter decides what its stretch looks like (loop, bow, notch...). A ring marks the start, a bar the end. |
+| **classic** | The original animation. |
+
+### How it's put together
+
+- `src/scripts/engine.js` - shared pieces: point-list shapes, morphing, the `Stroke` class, and a promise based timeline (`await tl.tween(...)`, `await tl.sleep(...)`) that cancels cleanly on reset.
+- `src/scripts/glyphs.js` - a single-stroke alphabet, so a letter can be morphed into any other stroke.
+- `src/scripts/variations/` - one file per variation. To add one, export an async function and register it in `variations` in `main.js` (and add a radio button in `index.html`).
 
 ## TODO
 
@@ -17,7 +35,7 @@ A sigil _(/ˈsɪdʒəl/; pl. sigilla or sigils)_ is a type of symbol used in mag
 - [ ] Incorporate a modifier to randomize shape size and position
 - [x] Center drawings
 - [ ] Fix this "Only letters are allowed, no numbers or special characters.": Let users type whatever, then remove those characters
-- [ ] Improve method of calculating when to perform animations.
+- [x] Improve method of calculating when to perform animations. (Now promise based, see `createTimeline` in `engine.js`. Notes below kept for history.)
 - There shouldn't be all this calculating the animation duration, one event or animation should finish and the following one should wait for it.
 - Maybe await or promise? But not sure.
 - This is the modification in the handleFormSubmit function that led me to this conclusion:
