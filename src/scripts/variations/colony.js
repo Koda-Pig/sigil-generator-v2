@@ -4,6 +4,7 @@ import {
   shapes,
   morph,
   dust,
+  settle,
   polar,
   toPolar,
   lerp,
@@ -25,6 +26,9 @@ import {
 //   1 neighbour   bond      - combine with that neighbour (see `bond`)
 //   2-3           thrive    - grow, and become a more complex shape
 //   4+            overcrowd - flip to the opposite shape and get thrown out
+//
+// The shapes and sizes the cells end up with are what the sigil is then
+// built from, so the same letters can give very different results.
 //
 // "Simpler" and "more complex" are steps along this ladder:
 const LADDER = [
@@ -48,7 +52,7 @@ const TINT = {
   overcrowd: "#e0703c"
 };
 
-export default async function colony({ layer, letters, tl, spawn }) {
+export default async function colony({ layer, letters, tl, spawn, compose, finish }) {
   const vowels = letters.filter((l) => !l.shape);
   const consonants = letters.filter((l) => l.shape);
 
@@ -60,6 +64,7 @@ export default async function colony({ layer, letters, tl, spawn }) {
   const cells = consonants.map((letter) => {
     const stroke = spawn(letter);
     return {
+      letter,
       stroke,
       rung: LADDER.indexOf(letter.shape),
       x: stroke.x,
@@ -271,22 +276,21 @@ export default async function colony({ layer, letters, tl, spawn }) {
     clearTints();
   }
 
-  // Finally the survivors gather: the largest in the middle, the rest in
-  // orbit around it, facing outward
-  const survivors = free().sort((a, b) => b.size - a.size);
-  const [core, ...orbit] = survivors;
-  if (core) {
-    const coreSize = orbit.length ? clamp(core.size * 1.8, 60, 100) : 120;
-    core.goal = { x: C, y: C, size: coreSize, rot: snap(core.rot, Math.PI / 4) };
-    const spin = rand(0, Math.PI * 2);
-    orbit.forEach((cell, i) => {
-      const size = clamp(cell.size, 22, 38);
-      const angle = spin + (i / orbit.length) * Math.PI * 2;
-      const [x, y] = polar(Math.min(coreSize + size + 18, 170), angle);
-      cell.goal = { x, y, size, rot: angle };
-    });
-    await run(1100);
-  }
+  // Finally the colony settles into the sigil. What each cell turned into
+  // decides its shape, and how well it did decides its place: survivors
+  // first, largest leading, then the cells that bonded onto others.
+  const ranked = [
+    ...free().sort((a, b) => b.size - a.size),
+    ...cells.filter((c) => c.host).sort((a, b) => b.size - a.size)
+  ];
+  const { targets, extras } = compose(
+    ranked.map((cell) => ({ ...cell.letter, shape: LADDER[cell.rung] }))
+  );
+  const curl = pick([-1, 1]) * rand(0.3, 0.7);
+  await Promise.all(
+    ranked.map((cell, i) => settle(cell.stroke, targets[i], tl, { curl, wobble: 4 }))
+  );
+  await finish(extras);
 
   await Promise.all(crumbling);
 }

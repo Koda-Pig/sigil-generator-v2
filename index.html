@@ -30,14 +30,21 @@
           <button type="reset">reset</button>
         </div>
       </form>
-      <fieldset class="variations">
-        <legend>Animation</legend>
-        <label><input type="radio" name="variation" value="random" checked /><span>random</span></label>
-        <label><input type="radio" name="variation" value="metamorphosis" /><span>metamorphosis</span></label>
-        <label><input type="radio" name="variation" value="wheel" /><span>wheel</span></label>
-        <label><input type="radio" name="variation" value="colony" /><span>colony</span></label>
-        <label><input type="radio" name="variation" value="thread" /><span>thread</span></label>
-        <label><input type="radio" name="variation" value="classic" /><span>classic</span></label>
+      <fieldset class="variations" id="journey">
+        <legend>Journey - how the letters travel</legend>
+        <label><input type="radio" name="journey" value="random" checked /><span>random</span></label>
+        <label><input type="radio" name="journey" value="metamorphosis" /><span>metamorphosis</span></label>
+        <label><input type="radio" name="journey" value="wheel" /><span>wheel</span></label>
+        <label><input type="radio" name="journey" value="colony" /><span>colony</span></label>
+        <label><input type="radio" name="journey" value="classic" /><span>classic</span></label>
+      </fieldset>
+      <fieldset class="variations" id="form">
+        <legend>Form - the rules the sigil is built by</legend>
+        <label><input type="radio" name="form" value="random" checked /><span>random</span></label>
+        <label><input type="radio" name="form" value="stave" /><span>stave</span></label>
+        <label><input type="radio" name="form" value="seal" /><span>seal</span></label>
+        <label><input type="radio" name="form" value="kamea" /><span>kamea</span></label>
+        <label><input type="radio" name="form" value="mirror" /><span>mirror</span></label>
       </fieldset>
       <p class="now-playing" aria-live="polite"></p>
       <section class="result">

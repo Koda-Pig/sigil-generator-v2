@@ -71,7 +71,7 @@ export const morph = (from, to, t, wobble = 0, phase = 0) => {
   ]);
 };
 
-const arc = (cx, cy, r, from, to, steps = 48) =>
+export const arc = (cx, cy, r, from, to, steps = 48) =>
   Array.from({ length: steps + 1 }, (_, i) => {
     const a = lerp(from, to, i / steps);
     return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
@@ -181,6 +181,16 @@ export const segment = (shape, p, q, sign = 1) => {
   );
 };
 
+// A unit shape moved, scaled and turned into place on the stage
+export const place = (shape, x, y, scale, rot = 0) => {
+  const cos = Math.cos(rot) * scale,
+    sin = Math.sin(rot) * scale;
+  return shapes[shape].map(([px, py]) => [
+    x + px * cos - py * sin,
+    y + px * sin + py * cos
+  ]);
+};
+
 /* ---------- drawing ---------- */
 
 export class Stroke {
@@ -192,6 +202,7 @@ export class Stroke {
     this.scale = 1;
     this.opacity = 1;
     this.reveal = 1; // 0..1, how much of the stroke is drawn
+    this.width = 2;
     Object.assign(this, props);
     this.el = document.createElementNS(SVG_NS, "path");
     this.el.classList.add("stroke");
@@ -231,6 +242,7 @@ export class Stroke {
     }
     this.el.setAttribute("d", d);
     this.el.setAttribute("opacity", this.opacity);
+    this.el.style.strokeWidth = this.width;
   }
 
   remove() {
@@ -271,6 +283,29 @@ export const createTimeline = (signal) => {
 };
 
 /* ---------- effects ---------- */
+
+// Morph a stroke from wherever it is now into its place in the finished
+// sigil, curling around the centre on the way.
+export const settle = (stroke, target, tl, options = {}) => {
+  const { duration = 1900, curl = 0, wobble = 9 } = options;
+  const from = stroke.bake();
+  const fromWidth = stroke.width;
+  const toWidth = target.width || 2;
+  const phase = rand(0, 6);
+
+  return tl.tween(duration, (t) => {
+    const e = easeInOut(t);
+    const turn = Math.sin(Math.PI * e) * curl;
+    const cos = Math.cos(turn),
+      sin = Math.sin(turn);
+    stroke.pts = morph(from, target.pts, e, wobble, phase).map(([x, y]) => [
+      C + (x - C) * cos - (y - C) * sin,
+      C + (x - C) * sin + (y - C) * cos
+    ]);
+    stroke.width = lerp(fromWidth, toWidth, e);
+    stroke.render();
+  });
+};
 
 // Crumble a stroke into dust that drifts away from the centre.
 // Used for vowels, which never make it into a sigil.
