@@ -1,16 +1,21 @@
 import "../styles/style.scss";
+import { SIZE, Stroke, createTimeline, easeInOut } from "./engine.js";
+import { glyph } from "./glyphs.js";
+import metamorphosis from "./variations/metamorphosis.js";
+import stave, { defaults } from "./forms/stave.js";
 
 const form = document.querySelector("#wish-form"),
   txtInput = form.querySelector(".input"),
   submitBtn = form.querySelector("button[type='submit']"),
   resetBtn = form.querySelector("button[type='reset']"),
   result = document.querySelector(".result"),
-  svg = result.querySelector("#svg");
+  svg = result.querySelector("#svg"),
+  toggles = document.querySelectorAll(".options input");
 
 let letterNodes = null,
-  userInput = "",
   validInput = false,
-  animationDuration = 1000;
+  animationDuration = 1000,
+  controller = null; // aborts whichever animation is currently running
 
 const alphabet = {
   a: null,
@@ -43,6 +48,47 @@ const alphabet = {
 
 const vowels = ["a", "e", "i", "o", "u"];
 
+// The switches under the form. Each one turns a rule of the stave on or
+// off (see forms/stave.js), apart from:
+// - ink: draws the lines as if by hand
+// - repeatable: the same wish always gives the same sigil
+const options = { ...defaults, ink: true, repeatable: true };
+
+const loadOptions = () => {
+  try {
+    Object.assign(options, JSON.parse(localStorage.getItem("sigil-options")));
+  } catch {
+    // no saved options, or storage unavailable - keep the defaults
+  }
+  toggles.forEach((toggle) => (toggle.checked = !!options[toggle.name]));
+  result.classList.toggle("ink", options.ink);
+};
+
+const handleToggle = (e) => {
+  options[e.target.name] = e.target.checked;
+  try {
+    localStorage.setItem("sigil-options", JSON.stringify(options));
+  } catch {
+    // storage unavailable - the choice just won't be remembered
+  }
+  result.classList.toggle("ink", options.ink);
+  // redraw the current wish so the difference can be seen straight away
+  if (validInput) submitBtn.click();
+};
+
+// Random numbers that are the same every time for the same seed, so a
+// wish can always give the same sigil
+const seeded = (text) => {
+  let a = 2166136261;
+  for (const char of text) a = Math.imul(a ^ char.charCodeAt(0), 16777619);
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
 const setTransitionTime = () => {
   const computedStyle = window.getComputedStyle(result);
   animationDuration =
@@ -58,7 +104,16 @@ const validateInput = (e) => {
   else submitBtn.setAttribute("disabled", "");
 };
 
-const handleFormSubmit = (e) => {
+// Pulse the background of the ring once
+const ripple = async (tl) => {
+  result.classList.remove("animate");
+  void result.offsetWidth; // restart the css animation
+  result.classList.add("animate");
+  await tl.sleep(animationDuration);
+  result.classList.remove("animate");
+};
+
+const handleFormSubmit = async (e) => {
   e.preventDefault();
 
   // reset
@@ -72,60 +127,92 @@ const handleFormSubmit = (e) => {
     return;
   }
 
-  // process input
-  userInput = txtInput.value.toLowerCase();
-  userInput = processInput(userInput);
+  controller = new AbortController();
+  const tl = createTimeline(controller.signal);
 
-  // add animation classes
-  result.classList.add("animate");
+  // Light up the letters of the wish
+  const letters = processInput(txtInput.value.toLowerCase()).map(measure);
+  letters.forEach((letter) => letter.node.classList.add("show"));
 
-  userInput.forEach((character, index) => {
-    const shape = alphabet[character];
+  const layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  svg.appendChild(layer);
 
-    letterNodes.forEach((node) => {
-      if (character === node.innerText) {
-        node.classList.add("show");
-      }
+  // Swap a letter on the ring for a drawn copy that can be animated
+  const spawn = (letter) => {
+    letter.node.classList.add("taken");
+    return new Stroke(layer, glyph(letter.char), {
+      x: letter.x,
+      y: letter.y,
+      rot: letter.angle,
+      scale: letter.scale
     });
+  };
 
-    // draw shapes
-    setTimeout(() => {
-      drawShape(shape, index);
-    }, animationDuration * 2);
-  });
+  // Draw the parts of the sigil that don't come from a letter
+  // (spines, borders, terminals...) once the letters have landed
+  const finish = async (extras) => {
+    const strokes = extras.map((extra) => {
+      const stroke = new Stroke(layer, extra.pts, {
+        width: extra.width || 2,
+        reveal: 0
+      });
+      return stroke;
+    });
+    await Promise.all(
+      strokes.map(async (stroke, i) => {
+        await tl.sleep(Math.min(i * 60, 400));
+        await tl.tween(550, (t) => {
+          stroke.reveal = easeInOut(t);
+          stroke.render();
+        });
+      })
+    );
+  };
 
-  // animation for result
-  setTimeout(() => {
-    result.classList.remove("animate");
-    result.classList.add("slide-inward");
+  // If a reset or a new wish interrupts, the timeline stops resolving and
+  // this function just never continues past the await it was on
+  result.classList.add("animate");
+  await tl.sleep(animationDuration * 0.6);
+  result.classList.add("dim-rest");
 
-    setTimeout(() => {
-      result.classList.add("animate");
-
-      // Remove animate after it completes again
-      setTimeout(() => {
-        result.classList.remove("animate");
-      }, animationDuration);
-    }, animationDuration * 2.5); // Time after which slide-inward completes
-  }, animationDuration);
+  // The letters melt into their marks (variations/metamorphosis.js), laid
+  // out by the rules of the stave (forms/stave.js)
+  const rng = options.repeatable
+    ? seeded(letters.map((letter) => letter.char).join(""))
+    : Math.random;
+  const compose = (items) => stave(items, { ...options, rng });
+  await metamorphosis({ layer, letters, tl, spawn, compose, finish });
+  await ripple(tl);
 };
 
-// Remove duplicates, spaces, convert to lowercase and alphabetize
+// Remove duplicates and spaces, keeping the order the letters appear in
 const processInput = (input) => {
-  let inputArray = Array.from(input);
-  const newArray = [];
-
-  // Only add new characters (no repeats)
-  for (let i = 0; i < inputArray.length; i++) {
-    if (!newArray.includes(inputArray[i]) && inputArray[i].trim() !== "") {
-      newArray.push(inputArray[i]);
+  const unique = [];
+  for (const character of input) {
+    if (character in alphabet && !unique.includes(character)) {
+      unique.push(character);
     }
   }
+  return unique;
+};
 
-  // Alphabetize
-  newArray.sort();
-
-  return newArray;
+// Where a letter sits on the ring, in svg coordinates
+const measure = (char) => {
+  const node = [...letterNodes].find((n) => n.innerText === char);
+  const stage = svg.getBoundingClientRect();
+  const box = node.getBoundingClientRect();
+  const k = SIZE / stage.width;
+  const x = (box.left + box.width / 2 - stage.left) * k;
+  const y = (box.top + box.height / 2 - stage.top) * k;
+  return {
+    char,
+    node,
+    shape: alphabet[char],
+    x,
+    y,
+    angle: Math.atan2(x - SIZE / 2, -(y - SIZE / 2)),
+    scale: parseFloat(getComputedStyle(node).fontSize) * 1.25 * k
+  };
 };
 
 const mapAlphabet = () => {
@@ -142,155 +229,13 @@ const mapAlphabet = () => {
 };
 
 const reset = ({ disableSubmit = true }) => {
+  controller?.abort();
   if (disableSubmit) submitBtn.setAttribute("disabled", "");
-  result.classList.remove("slide-inward");
-  result.classList.remove("animate");
-  result.querySelectorAll(".show").forEach((el) => el.classList.remove("show"));
+  result.classList.remove("animate", "dim-rest");
+  result
+    .querySelectorAll(".letter")
+    .forEach((el) => el.classList.remove("show", "taken"));
   svg.innerHTML = "";
-};
-
-const drawShape = (shape, index) => {
-  let elem;
-  // Random rotation angle
-  let rotationAngle = Math.random() * (index + 1) * 360;
-
-  const svgWidth = svg.clientWidth || svg.viewBox.baseVal.width;
-  const svgHeight = svg.clientHeight || svg.viewBox.baseVal.height;
-  const svgCenterX = svgWidth / 2;
-  const svgCenterY = svgHeight / 2;
-
-  // Should randomise this as well
-  let lineLength = Math.random() * 150 + 100;
-  // lineLength = 100;
-
-  switch (shape) {
-    case "line":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      elem.setAttribute("x1", svgCenterX - lineLength / 2);
-      elem.setAttribute("y1", svgCenterY);
-      elem.setAttribute("x2", svgCenterX + lineLength / 2);
-      elem.setAttribute("y2", svgCenterY);
-      break;
-
-    case "zigzag":
-      // Zigzag as a polyline for simplicity
-      const totalZigzagWidth = lineLength * 4; // Total width for 2 peaks
-      const startZigzagX = svgCenterX - totalZigzagWidth / 2; // Start from this X to center the zigzag
-      const zigzagHeight = lineLength / 2; // Adjust the height of the peaks if necessary
-
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-      elem.setAttribute(
-        "points",
-        `${startZigzagX},${svgCenterY} ` +
-          `${startZigzagX + lineLength},${svgCenterY - zigzagHeight} ` + // Peak 1
-          `${startZigzagX + lineLength * 2},${svgCenterY} ` + // Valley
-          `${startZigzagX + lineLength * 3},${svgCenterY + zigzagHeight} ` + // Peak 2
-          `${startZigzagX + lineLength * 4},${svgCenterY}` // Back to center line at the end
-      );
-      break;
-
-    case "triangle":
-      const sideLength = lineLength * 2,
-        triangleHeight = (Math.sqrt(3) / 2) * sideLength,
-        topVertexX = svgCenterX,
-        topVertexY = svgCenterY - (2 / 3) * triangleHeight,
-        bottomLeftVertexX = svgCenterX - sideLength / 2,
-        bottomRightVertexX = svgCenterX + sideLength / 2,
-        bottomVerticesY = svgCenterY + (1 / 3) * triangleHeight;
-
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-      elem.setAttribute(
-        "points",
-        `${topVertexX},${topVertexY} ` +
-          `${bottomLeftVertexX},${bottomVerticesY} ` +
-          `${bottomRightVertexX},${bottomVerticesY}`
-      );
-      break;
-
-    case "rectangle":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      elem.setAttribute("x", svgCenterX - (lineLength * 1.5) / 2);
-      elem.setAttribute("y", svgCenterY - lineLength / 2);
-      elem.setAttribute("width", lineLength * 1.5);
-      elem.setAttribute("height", lineLength);
-      break;
-
-    case "square":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      elem.setAttribute("x", svgCenterX - lineLength / 2);
-      elem.setAttribute("y", svgCenterY - lineLength / 2);
-      elem.setAttribute("width", lineLength);
-      elem.setAttribute("height", lineLength);
-      break;
-
-    case "circle":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      elem.setAttribute("cx", svgCenterX);
-      elem.setAttribute("cy", svgCenterY);
-      elem.setAttribute("r", lineLength);
-      elem.setAttribute("noBBox", ""); // No bbox for circle
-      break;
-
-    case "crescent":
-      const cLength = lineLength * 1.5;
-      // length ratio
-      const lr = (percent) => {
-        return percent ? (percent / 100) * cLength : cLength;
-      };
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      elem.setAttribute(
-        "d",
-        `M${lr()} ${lr(40)}A${lr(80)} ${lr(80)} 0 1 0 ${lr()} ${lr(140)} ${lr(
-          60
-        )} ${lr(60)} 0 1 1 ${lr()} ${lr(40)}z`
-      );
-      // center the crescent
-      elem.customTransform = "translate(200 105)";
-      break;
-
-    case "chevron":
-      elem = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-      elem.setAttribute(
-        "points",
-        `${svgCenterX - lineLength / 2},${svgCenterY - lineLength / 2} ` +
-          `${svgCenterX},${svgCenterY + lineLength / 2} ` +
-          `${svgCenterX + lineLength / 2},${svgCenterY - lineLength / 2}`
-      );
-      break;
-  }
-
-  if (!elem) return;
-
-  elem.setAttribute("stroke-width", "2");
-  elem.setAttribute("fill", "none"); // For shapes like rectangle, triangle
-  svg.appendChild(elem);
-
-  // Apply rotation for elements, adjusting the center as needed
-  // with the exception of some elements which have no bbox (circle)
-  // Or if there is only one element, no need to rotate
-  if (!elem.hasAttribute("noBBox") && userInput.length > 1) {
-    const bbox = elem.getBBox();
-    const centerX = bbox.x + bbox.width / 2;
-    const centerY = bbox.y + bbox.height / 2;
-    elem.setAttribute(
-      "transform",
-      `rotate(${rotationAngle} ${centerX} ${centerY}) ${
-        elem.customTransform ? elem.customTransform : ""
-      }`
-    );
-  }
-
-  if (userInput.length === 1 && elem.customTransform) {
-    elem.setAttribute("transform", elem.customTransform);
-  }
-
-  // Animation for drawing the element
-  const length = elem.getTotalLength ? elem.getTotalLength() : 0;
-  if (length > 0) {
-    // Only apply if getTotalLength is supported
-    elem.style.strokeDasharray = length;
-    elem.style.strokeDashoffset = length;
-  }
 };
 
 const restoreInputFocus = (e) => {
@@ -303,9 +248,11 @@ const restoreInputFocus = (e) => {
 
 setTransitionTime();
 mapAlphabet();
+loadOptions();
 txtInput.focus();
 
 txtInput.addEventListener("input", (e) => validateInput(e));
 submitBtn.addEventListener("click", (e) => handleFormSubmit(e));
 resetBtn.addEventListener("click", reset);
+toggles.forEach((toggle) => toggle.addEventListener("change", handleToggle));
 document.body.addEventListener("click", restoreInputFocus);

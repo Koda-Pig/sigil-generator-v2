@@ -120,6 +120,66 @@ h1 {
   }
 }
 
+.options {
+  gap: 0.5rem;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 34rem;
+  margin: 0 auto 1.25rem;
+  justify-content: center;
+
+  legend {
+    width: 100%;
+    opacity: 0.6;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  label {
+    cursor: pointer;
+  }
+
+  input {
+    opacity: 0;
+    position: absolute;
+    pointer-events: none;
+  }
+
+  span {
+    display: block;
+    opacity: 0.7;
+    color: var(--blue);
+    border-radius: 9vw;
+    padding: 0.35rem 0.9rem;
+    transition: 0.15s all;
+    border: 1px solid var(--blue-50);
+    text-decoration: line-through;
+  }
+
+  label:hover span {
+    border-color: var(--blue);
+  }
+
+  input:checked + span {
+    opacity: 1;
+    color: var(--white);
+    text-decoration: none;
+    border-color: var(--blue);
+    background-color: var(--blue);
+  }
+
+  input:focus-visible + span {
+    outline: 0.15rem solid var(--white);
+  }
+}
+
+.defs {
+  position: absolute;
+}
+
 .result {
   display: grid;
   overflow: clip;
@@ -142,20 +202,10 @@ h1 {
     animation: ripple var(--animation-time);
   }
 
-  &.slide-inward {
-    .letter {
-      opacity: 0;
-      transition-duration: 2s;
-
-      &.show {
-        animation: dissolve var(--animation-time) forwards;
-      }
-
-      // &.vowel {
-      // need to implement a animation to indicate that vowels
-      // are removed and not used in the sigil
-      // }
-    }
+  // Letters that aren't part of the wish fade away
+  &.dim-rest .letter:not(.show) {
+    opacity: 0;
+    transition-duration: 0.8s;
   }
 
   .letter {
@@ -175,6 +225,12 @@ h1 {
       text-shadow: 1px 1px 10px var(--blue);
     }
 
+    // Replaced by a drawn copy in the svg, which does the animating
+    &.taken {
+      opacity: 0;
+      transition: none;
+    }
+
     @for $i from 0 through 27 {
       &:nth-child(#{$i}) {
         --angle: calc(360deg / 26 * #{$i});
@@ -185,33 +241,34 @@ h1 {
     }
   }
 
+  // Hand-drawn line: the strokes are nudged by a noise filter (#ink in
+  // index.html)
+  &.ink svg > g {
+    filter: url(#ink);
+  }
+
   svg {
+    height: auto;
     max-width: 100%;
-    > * {
-      position: absolute;
+    filter: drop-shadow(0 0 4px var(--blue-50));
+
+    .stroke {
+      fill: none;
       stroke: var(--white);
-      stroke-dasharray: 1000;
-      stroke-dashoffset: 1000;
-      animation: drawLine 2s ease forwards;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.25s;
     }
+
+    .mote {
+      fill: var(--white);
+    }
+
   }
 }
 
 @keyframes ripple {
   50% {
     background-size: 700% 700%;
-  }
-}
-
-@keyframes dissolve {
-  100% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateY(0);
-  }
-}
-
-@keyframes drawLine {
-  to {
-    stroke-dashoffset: 0;
   }
 }

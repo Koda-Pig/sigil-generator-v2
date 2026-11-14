@@ -8,7 +8,40 @@ A sigil _(/ˈsɪdʒəl/; pl. sigilla or sigils)_ is a type of symbol used in mag
 
 1. Clone the repository
 2. Run `npm install`
-3. Run `npm dev`
+3. Run `npm run dev`
+
+## How a sigil is made
+
+1. The letters of the wish light up on the ring. Repeats are dropped.
+2. Vowels crumble to dust. Each consonant leaves the ring and melts from its letterform into a mark (`src/scripts/variations/metamorphosis.js`).
+3. The marks are laid out as a **stave**, a bindrune (`src/scripts/forms/stave.js`). The rules:
+   - One dominant axis: every mark hangs on a vertical spine and is mirror-symmetrical across it.
+   - A focal point: the mark at the golden section of the spine is the largest and heaviest. Marks shrink the further they are from it.
+   - Direction: chevrons, cups and triangles point away from the focal mark.
+   - Terminals: a ring caps the top of the spine, a bar the bottom.
+
+### Rules you can switch on and off
+
+The switches under the form each turn one rule on or off. Changing one redraws the current wish, and the choices are remembered.
+
+| Switch | What it does |
+| --- | --- |
+| **variants** | Every letter gets its own version of its shape, so letters that share a shape (b d g p q are all circles) stop looking identical. |
+| **fusion** | Neighbouring marks combine into a compound mark: a closed shape and a line become a pierced shape, two chevrons a diamond, a crescent and a circle a horned ring, two closed shapes nest, two lines cross. |
+| **balance** | Marks are ordered by visual weight instead of wish order: heaviest at the focal point, lightest at the ends, with more room around heavy marks. |
+| **branching** | The marks furthest from the focal point move off the spine onto a pair of mirrored arms. Needs four or more marks. |
+| **ornament** | Varied terminals on the spine, a second outline round a closed focal mark, dots beside the slimmer marks, rings on the arm tips. |
+| **ink** | Nudges the lines with a noise filter so they look drawn by hand. |
+| **repeatable** | The same wish always gives the same sigil. Off, every draw is different. |
+
+Only the consonants of the wish, each used once, ever reach the sigil. Vowels and repeated letters are never drawn from, including by the ornaments.
+
+### How it's put together
+
+- `src/scripts/engine.js` - shared pieces: point-list shapes, morphing, the `Stroke` class, and a promise based timeline (`await tl.tween(...)`, `await tl.sleep(...)`) that cancels cleanly on reset.
+- `src/scripts/glyphs.js` - a single-stroke alphabet, so a letter can be morphed into any other stroke.
+- `src/scripts/variations/metamorphosis.js` - the animation.
+- `src/scripts/forms/stave.js` - the layout. A plain function: it takes the letters (`[{ char, shape }]`) and returns `{ targets, extras }` - one stroke per letter, plus the strokes that don't come from a letter (spine, terminals).
 
 ## TODO
 
@@ -17,7 +50,7 @@ A sigil _(/ˈsɪdʒəl/; pl. sigilla or sigils)_ is a type of symbol used in mag
 - [ ] Incorporate a modifier to randomize shape size and position
 - [x] Center drawings
 - [ ] Fix this "Only letters are allowed, no numbers or special characters.": Let users type whatever, then remove those characters
-- [ ] Improve method of calculating when to perform animations.
+- [x] Improve method of calculating when to perform animations. (Now promise based, see `createTimeline` in `engine.js`. Notes below kept for history.)
 - There shouldn't be all this calculating the animation duration, one event or animation should finish and the following one should wait for it.
 - Maybe await or promise? But not sure.
 - This is the modification in the handleFormSubmit function that led me to this conclusion:
