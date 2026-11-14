@@ -4,7 +4,7 @@
 // plus a position / rotation / scale. Because every stroke has the same
 // number of points, any stroke can be morphed into any other by
 // interpolating point-for-point - that's what lets a letter melt into a
-// circle, a zigzag or a segment of a longer line.
+// circle, a zigzag or a triangle.
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
 export const SIZE = 482; // svg viewBox size
@@ -18,25 +18,10 @@ export const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 export const rand = (min, max) => min + Math.random() * (max - min);
 export const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 export const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-export const snap = (v, step) => Math.round(v / step) * step;
 
 export const easeInOut = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 export const easeOut = (t) => 1 - Math.pow(1 - t, 3);
-export const easeIn = (t) => t * t * t;
-export const smooth = (t) => {
-  t = clamp(t, 0, 1);
-  return t * t * (3 - 2 * t);
-};
-
-// Polar coordinates measured the same way the letter ring is laid out:
-// angle 0 is straight up, increasing clockwise.
-export const polar = (r, a) => [C + r * Math.sin(a), C - r * Math.cos(a)];
-export const toPolar = (x, y) => ({
-  r: Math.hypot(x - C, y - C),
-  a: Math.atan2(x - C, -(y - C))
-});
-
 /* ---------- point lists ---------- */
 
 // Resample a polyline to n points evenly spaced along its length
@@ -117,69 +102,6 @@ const shapeDefs = {
 export const shapes = Object.fromEntries(
   Object.entries(shapeDefs).map(([name, poly]) => [name, resample(poly)])
 );
-
-// A line from p to q whose character depends on a shape: a circle puts a
-// loop in the line, a crescent bows it, a triangle notches it, and so on.
-const segmentDefs = {
-  line: [
-    [0, 0],
-    [1, 0]
-  ],
-  chevron: [
-    [0, 0],
-    [0.5, 0.2],
-    [1, 0]
-  ],
-  zigzag: [
-    [0, 0],
-    [0.2, 0],
-    [0.35, 0.12],
-    [0.5, -0.12],
-    [0.65, 0.12],
-    [0.8, 0],
-    [1, 0]
-  ],
-  triangle: [
-    [0, 0],
-    [0.38, 0],
-    [0.5, 0.2],
-    [0.62, 0],
-    [1, 0]
-  ],
-  square: [
-    [0, 0],
-    [0.42, 0],
-    [0.42, 0.16],
-    [0.58, 0.16],
-    [0.58, 0],
-    [1, 0]
-  ],
-  rectangle: [
-    [0, 0],
-    [0.34, 0],
-    [0.34, 0.12],
-    [0.66, 0.12],
-    [0.66, 0],
-    [1, 0]
-  ],
-  crescent: Array.from({ length: 33 }, (_, i) => [
-    i / 32,
-    0.28 * Math.sin((Math.PI * i) / 32)
-  ]),
-  circle: [[0, 0], ...arc(0.5, 0.13, 0.13, -90 * deg, 270 * deg, 40), [1, 0]]
-};
-
-export const segment = (shape, p, q, sign = 1) => {
-  const dx = q[0] - p[0],
-    dy = q[1] - p[1];
-  const local = segmentDefs[shape] || segmentDefs.line;
-  return resample(
-    local.map(([u, v]) => [
-      p[0] + dx * u - dy * v * sign,
-      p[1] + dy * u + dx * v * sign
-    ])
-  );
-};
 
 // A unit shape moved, scaled and turned into place on the stage
 export const place = (shape, x, y, scale, rot = 0) => {

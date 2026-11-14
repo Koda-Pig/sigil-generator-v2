@@ -12,36 +12,20 @@ A sigil _(/ˈsɪdʒəl/; pl. sigilla or sigils)_ is a type of symbol used in mag
 
 ## How a sigil is made
 
-There are two pickers under the form. Leave either on **random** to get a different one each wish.
-
-### Journey - how the letters travel
-
-| Journey | What happens |
-| --- | --- |
-| **metamorphosis** | Every letter leaves the ring at once and melts from its letterform into its place in the sigil. |
-| **wheel** | A line is traced across the ring from letter to letter in wish order (the "witch's wheel"). The style of each chord depends on the letter it arrives at. The traced lines then fold up into the sigil. |
-| **colony** | A cellular automaton, in the spirit of Conway's Game of Life. Each generation the letters drift together, count their neighbours, and react: 0 neighbours → starve (simpler shape), 1 → bond with it, 2-3 → thrive (more complex shape), 4+ → overcrowd (flip shape, thrown outward). The shapes and sizes the cells end up with are what the sigil is built from. |
-| **classic** | The original animation (ignores the form). |
-
-Vowels crumble to dust in all the new ones.
-
-### Form - the rules the sigil is built by
-
-Each form is a small ruleset built on a few design principles, which is what keeps the result looking deliberate whatever the wish is.
-
-| Form | Principles | Rules |
-| --- | --- | --- |
-| **stave** | One dominant axis, mirror symmetry, a focal point | A bindrune. Each letter is a mark hung on a vertical spine. The focal mark sits at the golden section and is the largest; marks shrink away from it, and directional marks point away from it. |
-| **seal** | Containment, concentric structure, radial balance | Closed shapes are nested, each inscribed exactly inside the one before. Open shapes become radial marks spaced evenly round the border, repeated in rotational symmetry if there are too few to balance. |
-| **kamea** | A hidden grid, one unbroken line, determinism | The traditional planetary square method. Each letter has a fixed home on a 5x5 magic square and the wish is one line from home to home, with a ring at the start and a bar at the end. The same wish always gives the same sigil. Gets tangled with long wishes. |
-| **mirror** | Bilateral symmetry, limited angles, lattice alignment, connectedness | Each letter grows one branch from an existing point to a neighbouring lattice point, so every stroke is attached and only runs at 0, 45 or 90 degrees. The letter decides the kind of branch. Everything is reflected across a central trunk. |
+1. The letters of the wish light up on the ring. Repeats are dropped.
+2. Vowels crumble to dust. Each consonant leaves the ring and melts from its letterform into a mark (`src/scripts/variations/metamorphosis.js`).
+3. The marks are laid out as a **stave**, a bindrune (`src/scripts/forms/stave.js`). The rules:
+   - One dominant axis: every mark hangs on a vertical spine and is mirror-symmetrical across it.
+   - A focal point: the mark at the golden section of the spine is the largest and heaviest. Marks shrink the further they are from it.
+   - Direction: chevrons, cups and triangles point away from the focal mark.
+   - Terminals: a ring caps the top of the spine, a bar the bottom.
 
 ### How it's put together
 
 - `src/scripts/engine.js` - shared pieces: point-list shapes, morphing, the `Stroke` class, and a promise based timeline (`await tl.tween(...)`, `await tl.sleep(...)`) that cancels cleanly on reset.
 - `src/scripts/glyphs.js` - a single-stroke alphabet, so a letter can be morphed into any other stroke.
-- `src/scripts/variations/` - one file per journey.
-- `src/scripts/forms/` - one file per form. A form is a plain function: it takes the letters (`[{ char, shape }]`) and returns `{ targets, extras }` - one stroke per letter, plus any strokes that don't come from a letter (spines, borders, reflections). To add one, write that function, register it in `forms` in `main.js` and add a radio button in `index.html`.
+- `src/scripts/variations/metamorphosis.js` - the animation.
+- `src/scripts/forms/stave.js` - the layout. A plain function: it takes the letters (`[{ char, shape }]`) and returns `{ targets, extras }` - one stroke per letter, plus the strokes that don't come from a letter (spine, terminals).
 
 ## TODO
 
