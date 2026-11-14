@@ -2,14 +2,15 @@ import "../styles/style.scss";
 import { SIZE, Stroke, createTimeline, easeInOut } from "./engine.js";
 import { glyph } from "./glyphs.js";
 import metamorphosis from "./variations/metamorphosis.js";
-import stave from "./forms/stave.js";
+import stave, { defaults } from "./forms/stave.js";
 
 const form = document.querySelector("#wish-form"),
   txtInput = form.querySelector(".input"),
   submitBtn = form.querySelector("button[type='submit']"),
   resetBtn = form.querySelector("button[type='reset']"),
   result = document.querySelector(".result"),
-  svg = result.querySelector("#svg");
+  svg = result.querySelector("#svg"),
+  toggles = document.querySelectorAll(".options input");
 
 let letterNodes = null,
   validInput = false,
@@ -46,6 +47,47 @@ const alphabet = {
 };
 
 const vowels = ["a", "e", "i", "o", "u"];
+
+// The switches under the form. Each one turns a rule of the stave on or
+// off (see forms/stave.js), apart from:
+// - ink: draws the lines as if by hand
+// - repeatable: the same wish always gives the same sigil
+const options = { ...defaults, ink: true, repeatable: true };
+
+const loadOptions = () => {
+  try {
+    Object.assign(options, JSON.parse(localStorage.getItem("sigil-options")));
+  } catch {
+    // no saved options, or storage unavailable - keep the defaults
+  }
+  toggles.forEach((toggle) => (toggle.checked = !!options[toggle.name]));
+  result.classList.toggle("ink", options.ink);
+};
+
+const handleToggle = (e) => {
+  options[e.target.name] = e.target.checked;
+  try {
+    localStorage.setItem("sigil-options", JSON.stringify(options));
+  } catch {
+    // storage unavailable - the choice just won't be remembered
+  }
+  result.classList.toggle("ink", options.ink);
+  // redraw the current wish so the difference can be seen straight away
+  if (validInput) submitBtn.click();
+};
+
+// Random numbers that are the same every time for the same seed, so a
+// wish can always give the same sigil
+const seeded = (text) => {
+  let a = 2166136261;
+  for (const char of text) a = Math.imul(a ^ char.charCodeAt(0), 16777619);
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
 
 const setTransitionTime = () => {
   const computedStyle = window.getComputedStyle(result);
@@ -135,7 +177,11 @@ const handleFormSubmit = async (e) => {
 
   // The letters melt into their marks (variations/metamorphosis.js), laid
   // out by the rules of the stave (forms/stave.js)
-  await metamorphosis({ layer, letters, tl, spawn, compose: stave, finish });
+  const rng = options.repeatable
+    ? seeded(letters.map((letter) => letter.char).join(""))
+    : Math.random;
+  const compose = (items) => stave(items, { ...options, rng });
+  await metamorphosis({ layer, letters, tl, spawn, compose, finish });
   await ripple(tl);
 };
 
@@ -202,9 +248,11 @@ const restoreInputFocus = (e) => {
 
 setTransitionTime();
 mapAlphabet();
+loadOptions();
 txtInput.focus();
 
 txtInput.addEventListener("input", (e) => validateInput(e));
 submitBtn.addEventListener("click", (e) => handleFormSubmit(e));
 resetBtn.addEventListener("click", reset);
+toggles.forEach((toggle) => toggle.addEventListener("change", handleToggle));
 document.body.addEventListener("click", restoreInputFocus);

@@ -30,6 +30,22 @@
           <button type="reset">reset</button>
         </div>
       </form>
+      <fieldset class="options">
+        <legend>Rules</legend>
+        <label title="each letter gets its own version of its shape"><input type="checkbox" name="variants" checked /><span>variants</span></label>
+        <label title="neighbouring marks combine"><input type="checkbox" name="fusion" checked /><span>fusion</span></label>
+        <label title="heaviest marks at the focal point"><input type="checkbox" name="balance" checked /><span>balance</span></label>
+        <label title="marks move onto mirrored arms"><input type="checkbox" name="branching" checked /><span>branching</span></label>
+        <label title="varied terminals, dots, doubled focal mark"><input type="checkbox" name="ornament" checked /><span>ornament</span></label>
+        <label title="hand-drawn line"><input type="checkbox" name="ink" checked /><span>ink</span></label>
+        <label title="same wish, same sigil"><input type="checkbox" name="repeatable" checked /><span>repeatable</span></label>
+      </fieldset>
+      <svg class="defs" width="0" height="0" aria-hidden="true">
+        <filter id="ink" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="7" />
+          <feDisplacementMap in="SourceGraphic" scale="7" />
+        </filter>
+      </svg>
       <section class="result">
         <svg width="482" height="482" viewBox="0 0 482 482" id="svg"></svg>
       </section>
